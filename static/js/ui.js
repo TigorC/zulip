@@ -301,6 +301,11 @@ exports.lightbox_photo = function (image, user) {
     $("#overlay .image-actions, .image-description, .download").show();
 
     var img = new Image();
+    // show original image
+    url = url.replace(
+        /^\/user_uploads\/(\d+)(\/thumb\/\d+x\d+)/,
+        "/user_uploads/$1");
+
     img.src = url;
     $("#overlay .image-preview").html("").show()
         .append(img);

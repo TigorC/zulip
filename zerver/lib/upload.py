@@ -17,6 +17,7 @@ from boto.s3.bucket import Bucket
 from boto.s3.key import Key
 from boto.s3.connection import S3Connection
 from mimetypes import guess_type, guess_extension
+from resizeimage import resizeimage
 
 from zerver.models import get_user_profile_by_email, get_user_profile_by_id
 from zerver.models import Attachment
@@ -34,6 +35,7 @@ import logging
 
 DEFAULT_AVATAR_SIZE = 100
 MEDIUM_AVATAR_SIZE = 500
+MESSAGE_IMAGE_HEIGHT = 100
 
 # Performance Note:
 #
@@ -117,6 +119,22 @@ class ZulipUploadBackend(object):
         # type: (text_type) -> None
         raise NotImplementedError()
 
+    def is_image(self, file_name):
+        # type: (text_type) -> bool
+        for ext in [".bmp", ".gif", ".jpg", "jpeg", ".png", ".webp"]:
+            if file_name.lower().endswith(ext):
+                return True
+        return False
+
+    def make_message_image_thumbnail(self, image_data):
+        # type: (binary_type) -> Tuple[binary_type, text_type]
+        im = Image.open(io.BytesIO(image_data))
+        im = resizeimage.resize_height(im, MESSAGE_IMAGE_HEIGHT)
+        out = io.BytesIO()
+        im.save(out, format=im.format)
+        size = '{0}x{1}'.format(*im.size)
+        return out.getvalue(), size
+
 ### S3
 
 def get_bucket(conn, bucket_name):
@@ -191,23 +209,40 @@ class S3UploadBackend(ZulipUploadBackend):
     def upload_message_image(self, uploaded_file_name, content_type, file_data, user_profile, target_realm=None):
         # type: (text_type, Optional[text_type], binary_type, UserProfile, Optional[Realm]) -> text_type
         bucket_name = settings.S3_AUTH_UPLOADS_BUCKET
-        s3_file_name = "/".join([
-            str(target_realm.id if target_realm is not None else user_profile.realm.id),
+        realm_id = str(target_realm.id if target_realm is not None else user_profile.realm.id)
+        path_list = [
+            realm_id,
             random_name(18),
-            sanitize_name(uploaded_file_name)
-        ])
-        url = "/user_uploads/%s" % (s3_file_name)
+            sanitize_name(uploaded_file_name)]
+        s3_file_name = "/".join(path_list)
 
         upload_image_to_s3(
-                bucket_name,
-                s3_file_name,
-                content_type,
-                user_profile,
-                file_data
-        )
+            bucket_name,
+            s3_file_name,
+            content_type,
+            user_profile,
+            file_data)
 
         create_attachment(uploaded_file_name, s3_file_name, user_profile)
-        return url
+
+        if not self.is_image(uploaded_file_name):
+            return "/user_uploads/%s" % (s3_file_name,)
+
+        # generate thumbnail
+        thumbnail_file_data, size = self.make_message_image_thumbnail(file_data)
+        thumbnail_file_name = "/".join([
+            realm_id,
+            'thumb',
+            size
+        ] + path_list[1:])
+        upload_image_to_s3(
+            bucket_name,
+            thumbnail_file_name,
+            content_type,
+            user_profile,
+            thumbnail_file_data)
+
+        return "/user_uploads/%s" % (thumbnail_file_name,)
 
     def delete_message_image(self, path_id):
         # type: (text_type) -> bool
@@ -315,16 +350,29 @@ class LocalUploadBackend(ZulipUploadBackend):
     def upload_message_image(self, uploaded_file_name, content_type, file_data, user_profile, target_realm=None):
         # type: (text_type, Optional[text_type], binary_type, UserProfile, Optional[Realm]) -> text_type
         # Split into 256 subdirectories to prevent directories from getting too big
-        path = "/".join([
+        path_list = [
             str(user_profile.realm.id),
             format(random.randint(0, 255), 'x'),
             random_name(18),
-            sanitize_name(uploaded_file_name)
-        ])
+            sanitize_name(uploaded_file_name)]
+        path = "/".join(path_list)
 
         write_local_file('files', path, file_data)
         create_attachment(uploaded_file_name, path, user_profile)
-        return '/user_uploads/' + path
+
+        if not self.is_image(uploaded_file_name):
+            return "/user_uploads/%s" % (path,)
+
+        # generate thumbnail
+        thumbnail_file_data, size = self.make_message_image_thumbnail(file_data)
+        thumbnail_path = "/".join([
+            str(user_profile.realm.id),
+            'thumb',
+            size
+        ] + path_list[1:])
+        write_local_file('files', thumbnail_path, thumbnail_file_data)
+
+        return '/user_uploads/' + thumbnail_path
 
     def delete_message_image(self, path_id):
         # type: (text_type) -> bool
@@ -391,6 +439,9 @@ def upload_message_image(uploaded_file_name, content_type, file_data, user_profi
 
 def claim_attachment(user_profile, path_id, message, is_message_realm_public):
     # type: (UserProfile, text_type, Message, bool) -> bool
+    is_thumbnail = re.match('^(\d+)/thumb/', path_id)
+    if is_thumbnail:
+        path_id = re.sub('thumb/\d+x\d+/', '', path_id)
     try:
         attachment = Attachment.objects.get(path_id=path_id)
         attachment.messages.add(message)
