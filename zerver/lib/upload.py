@@ -1,4 +1,7 @@
 from __future__ import absolute_import
+import time
+import hmac
+from hashlib import sha1
 from typing import Optional, Tuple, Mapping, Any
 
 from django.utils.translation import ugettext as _
@@ -414,3 +417,35 @@ def upload_message_image_from_request(request, user_file, user_profile):
     # type: (HttpRequest, File, UserProfile) -> text_type
     uploaded_file_name, content_type = get_file_info(request, user_file)
     return upload_message_image(uploaded_file_name, content_type, user_file.read(), user_profile)
+
+
+def is_external_url(url):
+    # type: (text_type) -> bool
+    return url.startswith('http')
+
+
+def get_sign_hash(raw, key):
+    # type: (text_type, text_type) -> text_type
+    hashed = hmac.new(key, raw, sha1)
+    return hashed.digest().encode("base64").rstrip('\n')
+
+
+def get_thumbor_link(url_or_s3key, size='0x0', filters='smart'):
+    # type: (text_type, int, int) -> text_type
+    host = getattr(settings, 'THUMBOR_HOST', '')
+    thumbor_expire = getattr(settings, 'THUMBOR_EXPIRE_DURATION', 60 * 60)
+    if is_external_url(url_or_s3key):
+        expired = 0
+    else:
+        expired = int(time.time() + thumbor_expire)
+    raw = u'{0}_{1}'.format(url_or_s3key, expired)
+    sign_hash = get_sign_hash(raw, settings.THUMBOR_SIGN_KEY)
+    file_path = '{path}?{query}'.format(
+        path=url_or_s3key,
+        query=urllib.parse.urlencode({'expired': expired, 'sign': sign_hash}))
+    url = u'http://{host}/unsafe/{size}/{filters}/{file_path}'
+    return url.format(
+        host=host,
+        size=size,
+        filters=filters,
+        file_path=urllib.parse.quote(file_path))
