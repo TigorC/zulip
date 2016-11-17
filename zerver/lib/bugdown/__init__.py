@@ -123,6 +123,7 @@ def add_a(root, url, link, height="", title=None, desc=None,
             img.set('original-src', get_thumbor_link(url))
         elif url.startswith('/user_uploads/'):
             img.set("src", "{0}?size=0x100".format(url))
+            img.set('original-src', "{0}?size=0x0".format(url))
         else:
             img.set("src", url)
     else:

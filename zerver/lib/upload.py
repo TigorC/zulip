@@ -2,7 +2,7 @@ from __future__ import absolute_import
 import time
 import hmac
 from hashlib import sha1
-from typing import Optional, Tuple, Mapping, Any
+from typing import Optional, Tuple, Mapping, Any, Dict
 
 from django.utils.translation import ugettext as _
 from django.conf import settings

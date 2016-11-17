@@ -14,4 +14,6 @@ def load(context, url, callback):
         result.successful = False
         callback(result)
         return
+    if not helpers.is_external_url(url):
+        url = urllib.parse.urlsplit(url).path
     s3_loader.load(context, url, callback)

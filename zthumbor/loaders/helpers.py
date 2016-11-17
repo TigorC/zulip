@@ -48,3 +48,7 @@ def sign_is_valid(url):
         if int(expired) > time.time() or int(expired) == 0:
             return True
     return False
+
+
+def is_external_url(url):
+    return url.startswith('http')
