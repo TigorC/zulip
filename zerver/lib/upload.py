@@ -426,12 +426,12 @@ def is_external_url(url):
 
 def get_sign_hash(raw, key):
     # type: (text_type, text_type) -> text_type
-    hashed = hmac.new(key, raw, sha1)
+    hashed = hmac.new(key.encode('utf-8'), raw.encode('utf-8'), sha1)
     return hashed.digest().encode("base64").rstrip('\n')
 
 
 def get_thumbor_link(url_or_s3key, size='0x0', filters='smart'):
-    # type: (text_type, int, int) -> text_type
+    # type: (text_type, text_type, text_type) -> text_type
     host = getattr(settings, 'THUMBOR_HOST', '')
     thumbor_expire = getattr(settings, 'THUMBOR_EXPIRE_DURATION', 60 * 60)
     if is_external_url(url_or_s3key):
@@ -440,7 +440,7 @@ def get_thumbor_link(url_or_s3key, size='0x0', filters='smart'):
         expired = int(time.time() + thumbor_expire)
     raw = u'{0}_{1}'.format(url_or_s3key, expired)
     sign_hash = get_sign_hash(raw, settings.THUMBOR_SIGN_KEY)
-    file_path = '{path}?{query}'.format(
+    file_path = u'{path}?{query}'.format(
         path=url_or_s3key,
         query=urllib.parse.urlencode({'expired': expired, 'sign': sign_hash}))
     url = u'http://{host}/unsafe/{size}/{filters}/{file_path}'
@@ -448,4 +448,4 @@ def get_thumbor_link(url_or_s3key, size='0x0', filters='smart'):
         host=host,
         size=size,
         filters=filters,
-        file_path=urllib.parse.quote(file_path))
+        file_path=urllib.parse.quote(file_path.encode('utf-8')))

@@ -104,6 +104,9 @@ thumbor_port = base_port + 4
 
 os.chdir(os.path.join(os.path.dirname(__file__), '..'))
 
+# Thumbor server address
+os.environ['THUMBOR_HOST'] = '127.0.0.1:{0}'.format(thumbor_port)
+
 # Clean up stale .pyc files etc.
 subprocess.check_call('./tools/clean-repo')
 

@@ -20,7 +20,7 @@ class zulip::thumbor {
 
   $aws_access_key = zulipsecret("secrets", "s3_key", '')
   $aws_secret_access_key = zulipsecret("secrets", "s3_secret_key", '')
-  $aws_region = zulipsecret("secrets", "s3_region", 'us-east-1')
+  $aws_region = zulipconf("s3_region", 'us-east-1')
 
   file { "/home/zulip/.aws/config":
     ensure => file,

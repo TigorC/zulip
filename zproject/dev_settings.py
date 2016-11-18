@@ -4,8 +4,7 @@
 from .prod_settings_template import *
 import os
 
-LOCAL_UPLOADS_DIR = None  # 'var/uploads'
-S3_AUTH_UPLOADS_BUCKET = 'awsthumbor'
+LOCAL_UPLOADS_DIR = 'var/uploads'
 # Default to subdomains disabled in development until we can update
 # the development documentation to make sense with subdomains.
 REALMS_HAVE_SUBDOMAINS = False
@@ -39,4 +38,3 @@ SYSTEM_ONLY_REALMS = set() # type: Set[str]
 USING_PGROONGA = True
 # Flush cache after migration.
 POST_MIGRATION_CACHE_FLUSHING = True  # type: bool
-THUMBOR_HOST = 'zulipdev.com:9995'

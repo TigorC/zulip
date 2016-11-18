@@ -142,7 +142,6 @@ Filter.canonicalize_term = function (opts) {
 
     operator = Filter.canonicalize_operator(operator);
 
-    console.log(operator);
     switch (operator) {
     case 'has':
         // images -> image, etc.

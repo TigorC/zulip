@@ -1080,4 +1080,9 @@ if PRODUCTION:
 PROFILE_ALL_REQUESTS = False
 
 CROSS_REALM_BOT_EMAILS = set(('feedback@zulip.com', 'notification-bot@zulip.com'))
+
+if S3_KEY and S3_SECRET_KEY:
+    THUMBOR_HOST = os.getenv('THUMBOR_HOST', None)
+else:
+    THUMBOR_HOST = None
 THUMBOR_SIGN_KEY = get_secret('thumbor_sign_key')
