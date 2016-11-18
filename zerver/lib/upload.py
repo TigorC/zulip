@@ -449,3 +449,9 @@ def get_thumbor_link(url_or_s3key, size='0x0', filters='smart'):
         size=size,
         filters=filters,
         file_path=urllib.parse.quote(file_path.encode('utf-8')))
+
+
+def thumbor_is_enabled():
+    # type: () -> bool
+    # Currently we can use the Thumbor only with S3 backend
+    return getattr(settings, 'THUMBOR_HOST', None) and settings.S3_KEY

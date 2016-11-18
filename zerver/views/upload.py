@@ -11,7 +11,7 @@ from zerver.decorator import authenticated_json_post_view, zulip_login_required
 from zerver.lib.request import has_request_variables, REQ
 from zerver.lib.response import json_success, json_error
 from zerver.lib.upload import upload_message_image_from_request, get_local_file_path, \
-    get_signed_upload_url, get_realm_for_filename, get_thumbor_link
+    get_signed_upload_url, get_realm_for_filename, get_thumbor_link, thumbor_is_enabled
 from zerver.lib.validator import check_bool
 from zerver.models import UserProfile
 from django.conf import settings
@@ -30,7 +30,7 @@ def serve_s3(request, user_profile, realm_id_str, filename):
 
     # Internal users can access all uploads so we can receive attachments in cross-realm messages
     if user_profile.realm.id == realm_id or user_profile.realm.domain == 'zulip.com':
-        if getattr(settings, 'THUMBOR_HOST', None):
+        if thumbor_is_enabled():
             size = request.GET.get('size') or '0x0'
             thumbor_url = get_thumbor_link(url_path, size=size)
             return redirect(thumbor_url)
