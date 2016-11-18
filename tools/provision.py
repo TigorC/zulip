@@ -39,6 +39,7 @@ TEST_UPLOAD_DIR_PATH = os.path.join(VAR_DIR_PATH, 'test_uploads')
 COVERAGE_DIR_PATH = os.path.join(VAR_DIR_PATH, 'coverage')
 LINECOVERAGE_DIR_PATH = os.path.join(VAR_DIR_PATH, 'linecoverage-report')
 NODE_TEST_COVERAGE_DIR_PATH = os.path.join(VAR_DIR_PATH, 'node-coverage')
+THUMBOR_CONFIG_DIR = "/srv/thumbor"
 
 # TODO: De-duplicate this with emoji_dump.py
 EMOJI_CACHE_PATH = "/srv/zulip-emoji-cache"
@@ -191,6 +192,15 @@ def main(options):
     run(["mkdir", "-p", LINECOVERAGE_DIR_PATH])
     # create linecoverage directory`var/node-coverage`
     run(["mkdir", "-p", NODE_TEST_COVERAGE_DIR_PATH])
+    # create thumbor config dir
+    run(["mkdir", "-p", THUMBOR_CONFIG_DIR])
+
+    # copy thumbor config file
+    run([
+        "sudo",
+        "cp",
+        "/srv/zulip/zthumbor/thumbor.conf",
+        os.path.join(THUMBOR_CONFIG_DIR, "thumbor.conf")])
 
     run(["tools/setup/download-zxcvbn"])
     if not os.path.isdir(EMOJI_CACHE_PATH):

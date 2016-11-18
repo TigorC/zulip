@@ -24,7 +24,7 @@ class zulip::thumbor {
 
   file { "/srv/thumbor/thumbor.conf":
     ensure => present,
-    source  => "/srv/zulip/zthumbor/thumbor.conf"
+    source => "/srv/zulip/zthumbor/thumbor.conf"
   }
 
   file { "/etc/supervisor/conf.d/thumbor.conf":
