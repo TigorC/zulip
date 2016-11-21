@@ -5,6 +5,11 @@ from hashlib import sha1
 from urlparse import urlparse, parse_qs
 import six.moves.configparser
 
+
+THUMBOR_EXTERNAL_TYPE = 'external'
+THUMBOR_S3_TYPE = 's3'
+THUMBOR_LOCAL_FILE_TYPE = 'local_file'
+
 config_file = six.moves.configparser.RawConfigParser()
 config_file.read("/etc/zulip/zulip.conf")
 
@@ -36,14 +41,20 @@ def get_param_value(data, param_name):
     return value or None
 
 
-def sign_is_valid(url):
+def get_url_params(url):
+    data = parse_qs(urlparse(url).query)
+    return {k: v[0] for k, v in data.items() if v}
+
+
+def sign_is_valid(url, context):
+    size = '{0}x{1}'.format(context.request.width, context.request.height)
     data = parse_qs(urlparse(url).query)
     expired = get_param_value(data, 'expired')
     sign = get_param_value(data, 'sign')
     if not expired or not sign:
         return False
     url_path = url.rsplit('?', 1)[0]
-    raw = u'{0}_{1}'.format(url_path, expired)
+    raw = u'_'.join([url_path, expired, size])
     if sign == get_sign_hash(raw, get_secret('thumbor_sign_key')):
         if int(expired) > time.time() or int(expired) == 0:
             return True

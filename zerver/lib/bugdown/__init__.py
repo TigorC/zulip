@@ -34,7 +34,9 @@ from zerver.lib.bugdown.fenced_code import FENCE_RE
 from zerver.lib.camo import get_camo_url
 from zerver.lib.timeout import timeout, TimeoutExpired
 from zerver.lib.cache import cache_with_key, cache_get_many, cache_set_many
-from zerver.lib.upload import get_thumbor_link, is_external_url, thumbor_is_enabled
+from zerver.lib.upload import (
+    get_thumbor_link, is_external_url, thumbor_is_enabled,
+    THUMBOR_EXTERNAL_TYPE)
 from zerver.models import Message
 import zerver.lib.alert_words as alert_words
 import zerver.lib.mention as mention
@@ -118,9 +120,9 @@ def add_a(root, url, link, height="", title=None, desc=None,
     img = markdown.util.etree.SubElement(a, "img")
     if url == link and thumbor_is_enabled():
         if is_external_url(url):
-            thumbor_url = get_thumbor_link(url, size='0x100')
+            thumbor_url = get_thumbor_link(url, THUMBOR_EXTERNAL_TYPE, size='0x100')
             img.set("src", thumbor_url)
-            img.set('original-src', get_thumbor_link(url))
+            img.set('original-src', get_thumbor_link(url, THUMBOR_EXTERNAL_TYPE))
         elif url.startswith('/user_uploads/'):
             img.set("src", "{0}?size=0x100".format(url))
             img.set('original-src', "{0}?size=0x0".format(url))

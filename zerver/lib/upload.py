@@ -38,6 +38,10 @@ import logging
 DEFAULT_AVATAR_SIZE = 100
 MEDIUM_AVATAR_SIZE = 500
 
+THUMBOR_EXTERNAL_TYPE = 'external'
+THUMBOR_S3_TYPE = 's3'
+THUMBOR_LOCAL_FILE_TYPE = 'local_file'
+
 # Performance Note:
 #
 # For writing files to S3, the file could either be stored in RAM
@@ -430,28 +434,31 @@ def get_sign_hash(raw, key):
     return hashed.digest().encode("base64").rstrip('\n')
 
 
-def get_thumbor_link(url_or_s3key, size='0x0', filters='smart'):
+def get_thumbor_link(source, source_type, size='0x0'):
     # type: (text_type, text_type, text_type) -> text_type
+    # source - URL/S3 Key/File path
+    # source_type - external/s3/local_file
     host = getattr(settings, 'THUMBOR_HOST', '')
     thumbor_expire = getattr(settings, 'THUMBOR_EXPIRE_DURATION', 60 * 60)
-    if is_external_url(url_or_s3key):
+    if source_type == THUMBOR_EXTERNAL_TYPE:
         expired = 0
     else:
         expired = int(time.time() + thumbor_expire)
-    raw = u'{0}_{1}'.format(url_or_s3key, expired)
+    raw = u'_'.join([source, str(expired), size])
     sign_hash = get_sign_hash(raw, settings.THUMBOR_SIGN_KEY)
-    file_path = u'{path}?{query}'.format(
-        path=url_or_s3key,
-        query=urllib.parse.urlencode({'expired': expired, 'sign': sign_hash}))
-    url = u'http://{host}/unsafe/{size}/{filters}/{file_path}'
+    query_params = urllib.parse.urlencode({
+        'expired': expired,
+        'sign': sign_hash,
+        'source_type': source_type})
+    file_path = u'{path}?{query}'.format(path=source, query=query_params)
+    url = u'http://{host}/unsafe/{size}/smart/{file_path}'
     return url.format(
         host=host,
         size=size,
-        filters=filters,
         file_path=urllib.parse.quote(file_path.encode('utf-8')))
 
 
 def thumbor_is_enabled():
     # type: () -> bool
     # Currently we can use the Thumbor only with S3 backend
-    return getattr(settings, 'THUMBOR_HOST', None) and settings.S3_KEY
+    return getattr(settings, 'THUMBOR_HOST', None)
